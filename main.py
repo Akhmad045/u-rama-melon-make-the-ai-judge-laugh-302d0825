@@ -15,6 +15,7 @@ import argparse
 import os
 import sys
 import tempfile
+import unicodedata
 
 JOKE = "The only thing that moves faster than a deadline in this office is the rumour that the deadline moved."
 
@@ -38,6 +39,8 @@ def validate(text):
         code = ord(ch)
         if code < 32 or code == 127:
             return "entry contains a control character U+%04X" % code
+        if unicodedata.category(ch) == "Cf":
+            return "entry contains an invisible format character U+%04X" % code
     return None
 
 
@@ -77,6 +80,10 @@ def self_test():
     check("trailing whitespace rejected", validate(JOKE + " ") is not None)
     check("control character rejected", validate("a\x07b") is not None)
     check("tab rejected", validate("a\tb") is not None)
+    check("zero-width space alone rejected",
+          validate("\u200b") is not None)
+    check("zero-width space inside a line rejected",
+          validate("a\u200bb") is not None)
 
     with tempfile.TemporaryDirectory() as tmp:
         probe = os.path.join(tmp, "entry.txt")
